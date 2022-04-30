@@ -5,8 +5,8 @@ library(corrplot)
 library(reshape2)
 
 
-TIGS<-read.csv("C:/Users/LENOVO/Downloads/TIGS data.csv")
-
+TIGS<-read.csv("C:/Users/LENOVO/Downloads/TIGS_data.csv")
+TIGS<-TIGS %>% select(c("Sample.ID","Date","Final.Result","Viral.Load..copies.ml.","STP"))
 
 
 # TIGS data cleaning
@@ -32,21 +32,23 @@ TIGS1<-TIGS1[!(TIGS1$Final.Result=="Invalid"),]
 
 TIGS1$Viral.Load..copies.ml.[TIGS1$Final.Result=="Negative" & is.na(TIGS1$Viral.Load..copies.ml.)]<-0
 TIGS$Viral.Load..copies.ml.[TIGS$Final.Result=="Negative" & is.na(TIGS$Viral.Load..copies.ml.)]<-0
+TIGS1$Viral.Load..copies.ml.[TIGS1$Final.Result=="Negative" & TIGS1$Viral.Load..copies.ml.>5]<-5
+TIGS1$Viral.Load..copies.ml.[TIGS1$Final.Result=="Negative" & TIGS1$Viral.Load..copies.ml.==0]<-1
 
 #Calculating EWMA
 
 lamda<-0.70
 
+#calculating the log
+TIGS1<-TIGS1 %>% mutate(log_viral_loads=log(Viral.Load..copies.ml.))
 
+TIGS1<- TIGS1 %>% group_by(STP) %>% mutate(ewma = accumulate(log_viral_loads, ~lamda*.y+(1 - lamda)*.x))
 
-TIGS1<- TIGS1 %>% group_by(STP) %>% mutate(ewma = accumulate(Viral.Load..copies.ml., ~lamda*.y+(1 - lamda)*.x))
-rm(TIGS2)
 
 #Merging the final and the old data set
 
-TIGS_merged<-merge(x=TIGS,y=TIGS1,by=c("Date","STP","Lab.ID","Final.Result","Viral.Load..copies.ml.","Rnase.P","E.Gene","RdRp.Gene","N.Gene","date_onset"),all.x = T)
-TIGS_merged2<- TIGS_merged %>% group_by(date_onset,STP) %>% mutate(ewma = accumulate(Viral.Load..copies.ml., ~ lamda * .y + (1 - lamda) * .x))
-write.csv(TIGS_merged,"C:/Users/LENOVO/Downloads/exported data/tigs_EWMA_merged1.csv")
+TIGS_merged<-merge(x=TIGS,y=TIGS1,by=c("Sample.ID","Date","Final.Result","Viral.Load..copies.ml.","STP","date_onset"),all.x = T)
+write.csv(TIGS_merged,"C:/Users/LENOVO/Downloads/exported data/tigs_EWMA_merged_final.csv")
 
 #Renaming variables
 
