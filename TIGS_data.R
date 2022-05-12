@@ -46,16 +46,25 @@ rm(TIGS2)
 
 TIGS_merged<-merge(x=TIGS,y=TIGS1,by=c("Date","STP","Lab.ID","Final.Result","Viral.Load..copies.ml.","Rnase.P","E.Gene","RdRp.Gene","N.Gene","date_onset"),all.x = T)
 TIGS_merged2<- TIGS_merged %>% group_by(date_onset,STP) %>% mutate(ewma = accumulate(Viral.Load..copies.ml., ~ lamda * .y + (1 - lamda) * .x))
-write.csv(TIGS_merged,"C:/Users/LENOVO/Downloads/exported data/tigs_EWMA_merged1.csv")
+write.csv(TIGS_merged_weekly,"C:/Users/LENOVO/Downloads/exported data/tigs_merged_weekly_cases.csv")
 
 #Renaming variables
 
 TIGS_merged<-TIGS_merged %>% rename(Lab_ID=Lab.ID,
                                     Final_result=Final.Result,
                                     Viral_load_copies_ml=Viral.Load..copies.ml.)
-write.csv(TIGS_merged,"C:/Users/LENOVO/Downloads/exported data/tigs_EWMA_merged1.csv")
+write.csv(TIGS_merged_wide,"C:/Users/LENOVO/Downloads/exported data/tigs_wide.csv")
 
-#trying dcast to convert to wide format
 
-TIGS_merged_wide<- dcast(TIGS1, date_onset+Lab.ID+Rnase.P+E.Gene+RdRp.Gene~STP+Final.Result, value.var = "Viral.Load..copies.ml.")
+#Converting daily to weekly viral loads
 
+TIGS_merged_weekly<-TIGS_merged %>% drop_na(Date) %>% mutate(weekly_cases = floor_date(Date, unit = "week"))
+
+# Calculating the weekly emwa for each site
+
+TIGS_merged_weekly<-TIGS_merged_weekly %>% group_by(weekly_cases, STP, Final.Result, Sample.ID) %>% summarise(Viral_load_weekly= sum(Viral.Load..copies.ml., na.rm = T))
+
+# Decasting the data to wide
+
+TIGS_merged_wide<- dcast(TIGS_merged_weekly, weekly_cases~STP, value.var = "Viral_load_weekly", fun.aggregate = mean)
+TIGS_merged_wide <- subset(TIGS_merged_wide, select = -c(`Bellandur Amani kere`))
