@@ -3,6 +3,9 @@ library(lubridate)
 library(ggplot2)
 library(corrplot)
 library(reshape2)
+install.packages("RColorBrewer")
+library(zoo)
+library(RColorBrewer)
 
 
 TIGS<-read.csv("C:/Users/LENOVO/Downloads/TIGS data.csv")
@@ -53,20 +56,30 @@ write.csv(TIGS_merged_weekly,"C:/Users/LENOVO/Downloads/exported data/tigs_merge
 TIGS_merged<-TIGS_merged %>% rename(Lab_ID=Lab.ID,
                                     Final_result=Final.Result,
                                     Viral_load_copies_ml=Viral.Load..copies.ml.)
-write.csv(TIGS_merged_weekly,"C:/Users/LENOVO/Downloads/exported data/tigs_weekly_ewma.csv")
+write.csv(corrdata,"C:/Users/LENOVO/Downloads/exported data/tigs_correlations.csv")
 
 
 #Converting daily to weekly viral loads
 
-TIGS_merged_weekly<-TIGS_merged %>% drop_na(Date) %>% mutate(weekly_cases = floor_date(Date, unit = "week"))
+TIGS_merged_weekly<-TIGS_merged %>% drop_na(Date) %>% mutate(weekly_cases = floor_date(Date, unit = "10 days"))
 
 # Calculating the weekly emwa for each site
 
-TIGS_merged_weekly<-TIGS_merged_weekly %>% group_by(weekly_cases, STP, Final.Result, Sample.ID) %>% summarise(Viral_load_weekly= sum(Viral.Load..copies.ml., na.rm = T))
+TIGS_merged_weekly<-TIGS_merged_weekly %>% group_by(weekly_cases,STP,Final_result,Lab_ID) %>% summarise(Viral_load_weekly= sum(Viral_load_copies_ml, na.rm = T))
 
 # Decasting the data to wide
 
 TIGS_merged_wide<- dcast(TIGS_merged_weekly, weekly_cases~STP, value.var = "Viral_load_weekly", fun.aggregate = mean)
-TIGS_merged_wide <- subset(TIGS_merged_wide, select = -c(`Bellandur Amani kere`))
-TIGS_merged_wide_ewma<- as.data.frame((accumulate(TIGS_merged_wide$Agaram,~ lamda * .y + (1 - lamda) * .x)))
 
+# replacing NAN with the mean of the coloumn
+
+
+TIGS_merged_wide_1<- TIGS_merged_wide %>% select("Agaram":"Yele Mallappa Chetti Kere")
+TIGS_merged_wide_2<- TIGS_merged_wide %>% select("weekly_cases")
+TIGS_merged_wide_1<-na.aggregate(TIGS_merged_wide_1)
+#Combining merged 1 and merged 2
+TIGS_merged_final<- cbind(TIGS_merged_wide_1, TIGS_merged_wide_2)
+m<-cor(TIGS_merged_wide_1)
+corrplot(m, type="full", order="hclust",
+col=brewer.pal(n=10, name="RdYlBu"))
+corrdata<-as.data.frame(m)
