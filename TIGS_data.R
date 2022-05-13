@@ -53,7 +53,7 @@ write.csv(TIGS_merged_weekly,"C:/Users/LENOVO/Downloads/exported data/tigs_merge
 TIGS_merged<-TIGS_merged %>% rename(Lab_ID=Lab.ID,
                                     Final_result=Final.Result,
                                     Viral_load_copies_ml=Viral.Load..copies.ml.)
-write.csv(TIGS_merged_wide,"C:/Users/LENOVO/Downloads/exported data/tigs_wide.csv")
+write.csv(TIGS_merged_weekly,"C:/Users/LENOVO/Downloads/exported data/tigs_weekly_ewma.csv")
 
 
 #Converting daily to weekly viral loads
@@ -68,3 +68,5 @@ TIGS_merged_weekly<-TIGS_merged_weekly %>% group_by(weekly_cases, STP, Final.Res
 
 TIGS_merged_wide<- dcast(TIGS_merged_weekly, weekly_cases~STP, value.var = "Viral_load_weekly", fun.aggregate = mean)
 TIGS_merged_wide <- subset(TIGS_merged_wide, select = -c(`Bellandur Amani kere`))
+TIGS_merged_wide_ewma<- as.data.frame((accumulate(TIGS_merged_wide$Agaram,~ lamda * .y + (1 - lamda) * .x)))
+
